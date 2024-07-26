@@ -1,6 +1,8 @@
+
+
 from market import app, db
-from flask import render_template, redirect, url_for, flash, request
-from market.forms import PurchaseItemForm, RegisterForm, LoginForm, SellItemForm
+from flask import jsonify, render_template, redirect, url_for, flash, request
+from market.forms import AddItemForm, PurchaseItemForm, RegisterForm, LoginForm, SearchForm, SellItemForm
 from market.models import Item, User
 from flask_login import login_user,logout_user,login_required, current_user
 
@@ -86,3 +88,127 @@ def logout_page():
     logout_user()
     flash('you have been loged out ', category='info')
     return redirect(url_for('home_page'))
+
+
+
+
+#admin user
+@app.route('/admin_page')
+def admin_page():
+    return render_template('admin_page.html')
+
+@app.route('/manage_product')
+def manage_product():
+    form = AddItemForm()
+    purchase_form = PurchaseItemForm()
+    items = Item.query.all()
+    return render_template('admin_manage_product.html', items=items, form=form, purchase_form=purchase_form)
+
+@app.route('/add_item', methods=['GET','POST'])
+@login_required
+def add_item():
+    form = AddItemForm()
+    if form.validate_on_submit():
+        item_to_add = Item(name=form.name.data,price=form.price.data, barcode=form.barcode.data, description=form.description.data )
+        db.session.add(item_to_add)
+        db.session.commit()
+        print("databse add")
+        flash(f' {item_to_add.name} added to market', category='success')
+        return redirect(url_for('manage_product'))
+    
+    else:
+        for err_msg in form.errors.values():
+            flash(f'therser: {err_msg}', category='danger')
+        #flash('Error in form submission', category='danger')
+        # Re-render the template with the form to show validation errors
+        return render_template('home.html', form=form)
+
+@app.route('/delete_item/<int:item_id>')
+@login_required
+def delete_item(item_id):
+    item_to_delete = Item.query.get_or_404(item_id)
+    try:
+        db.session.delete(item_to_delete)
+        db.session.commit()
+        flash(f'Item {item_to_delete.name} has been deleted', 'success')
+        return redirect(url_for('manage_product'))
+    except:
+        flash(f'whoops some problem for deleting item {item_to_delete.name}', category='danger')
+        return redirect(url_for('manage_product'))
+
+@app.route('/edit_item/<int:item_id>', methods=['GET', 'POST'])
+@login_required
+def edit_item(item_id):
+    item_to_edit = Item.query.get_or_404(item_id)
+    form = AddItemForm()
+    if form.validate_on_submit():
+        item_to_edit.name = form.name.data
+        item_to_edit.barcode = form.barcode.data
+        item_to_edit.price = form.price.data
+        item_to_edit.description = form.description.data
+
+        db.session.add(item_to_edit)
+        db.session.commit()
+        flash('Item has been updated', category= 'success')
+        return redirect(url_for('manage_product'))
+
+
+@app.route('/get_item/<int:item_id>', methods=['GET'])
+def get_item(item_id):
+    item = Item.query.get_or_404(item_id)
+    item_data = {
+        'id': item.id,
+        'name': item.name,
+        'barcode': item.barcode,
+        'price': item.price,
+        'description': item.description
+    }
+
+    print(item)
+    return jsonify(item_data)
+
+@app.route('/admin_login_page', methods=['GET','POST'])
+def admin_login_page():
+    form = LoginForm()
+    if form.validate_on_submit():
+        admin_data = User.query.filter_by(username=form.username.data).first()
+        if admin_data.username == "Admin_123" and admin_data.check_password_correction(attempted_password = form.password.data):
+            login_user(admin_data)
+            flash(f'You are logged in as : {admin_data.username}', category='success')
+            return redirect(url_for('admin_page'))
+        else:
+            flash('incorrect username or password', category='danger')
+
+    return render_template('admin_login.html', form=form)
+
+
+@app.route('/user_data', methods=['GET', 'POST'])
+def get_all_user():
+    users = User.query.all()
+    
+
+    return render_template('admin_userdata.html', users=users)
+
+@app.route('/user_owned_items/<int:user_id>', methods=['GET', 'POST'])
+def user_owned_items(user_id):
+    items = Item.query.filter_by(owner=user_id).all()
+    item_data = [{'name': item.name} for item in items]
+    return jsonify(item_data)
+
+
+#search
+@app.context_processor
+def admin_page():
+    form = SearchForm()
+    return dict(form=form)
+
+@app.route('/search', methods=['POST'])
+def search():
+    form = SearchForm()
+    users = User.query
+    if request.method == 'POST' and form.validate_on_submit():
+        searched_user = form.searched.data
+        users = users.filter(User.username.like('%' + searched_user + '%'))
+        users = users.order_by(User.id).all()
+        return render_template('search.html', form=form , searched_user=searched_user, users=users)
+    

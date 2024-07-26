@@ -1,0 +1,40 @@
+<style>
+    .modal-content {
+      background-color: #212121
+    }
+  </style>
+<!-- sell Confirm -->
+<div class="modal fade" id="addItemModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Add Item</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('add_item') }}" method="post">
+                    {{ form.hidden_tag() }}
+                    <div class="form-group">
+                        <label for="item_name">Name</label>
+                        {{ form.name(class="form-control", placeholder= "Product Name") }}
+                    </div>
+                    <div class="form-group">
+                        <label for="item_barcode">Barcode</label>
+                        {{ form.barcode(class="form-control", placeholder= "Barcode") }}
+                    </div>
+                    <div class="form-group">
+                        <label for="item_price">Price</label>
+                        {{ form.price(class="form-control", placeholder= "Price") }}
+                    </div>
+                    <div class="form-group">
+                        <label for="item_description">Description</label>
+                        {{ form.description(class="form-control", placeholder= "Description") }}
+                    </div>
+                    <button type="submit" class="btn btn-primary">submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
